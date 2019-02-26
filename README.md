@@ -1,4 +1,4 @@
-# Constructed-BER-TLV-Enocer-and-Decoder
+# Constructed-BER-TLV-Encoder-and-Decoder
 Constructed BER-TLV Enocer and Decoder in C
 Basing on the Constructed BER-TLV specification, I design the TLV to be a linked data structure. 
 Define Tlv_t as
