@@ -137,7 +137,6 @@ uint32_t encode_Length(size_t valueLen)
 void printTLV(Tlv_t * tlv)
 {
 	uint8_t * valueData;
-	uint8_t tempByte=0;
 	size_t realValLength = 0, i=0, copyLength=0;
 
 	printf("\n\n tlv->nTag = 0x%X", tlv->nTag);
@@ -149,7 +148,7 @@ void printTLV(Tlv_t * tlv)
 		valueData = (uint8_t *)(tlv->pValue);
 		for(i=0; i<realValLength; i++)
 		{
-			printf("\n\t TLV Value[%d] = 0x%02X", i, valueData[i]);
+			printf("\n\t TLV Value[%ld] = 0x%02X", i, valueData[i]);
 		}
 	}
 }
@@ -157,7 +156,6 @@ void printTLV(Tlv_t * tlv)
 
 void transmitterTLV(Tlv_t * tlv, uint8_t * transmitterBuffer)
 {
-	uint8_t tempByte=0;
 	uint8_t tempTLBuffer[SPARE_BUFFER_SIZE];
 	size_t realValLength = 0, i=0, copyLength=0, addLengthCounter=0;
 
@@ -191,7 +189,7 @@ void transmitterTLV(Tlv_t * tlv, uint8_t * transmitterBuffer)
 
 	for(i=0; i<(addLengthCounter+SPARE_BUFFER_SIZE); i++)
 	{
-		printf("\n\t transmitterBuffer Value[%d] = 0x%02X", i, transmitterBuffer[i]);
+		printf("\n\t transmitterBuffer Value[%ld] = 0x%02X", i, transmitterBuffer[i]);
 	}
 }
 
@@ -227,7 +225,7 @@ size_t TlvParseAllChildrenTLV(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 		tlv->pChild = NULL;
 		tlv->pNext = NULL;
 
-		if(DEBUG_FLAG)printf("\n TlvParseAllChildrenTLV(), counter = %d, length = %d", counter, length);
+		if(DEBUG_FLAG)printf("\n TlvParseAllChildrenTLV(), counter = %ld, length = %ld", counter, length);
 		//skip 00 byte before the TLV data
 		while(buffer[counter]==0)
 		{
@@ -291,7 +289,7 @@ size_t TlvParseAllChildrenTLV(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 				fistChildIndexInBuffer = counter;
 
 				childCounter = TlvParseAllChildrenTLV(&buffer[fistChildIndexInBuffer], copyLength, (Tlv_t*)tlv->pChild);//recursive calling
-				if(DEBUG_FLAG)printf("\n fistChildIndexInBuffer=%d, childCounter=%d", fistChildIndexInBuffer, childCounter);
+				if(DEBUG_FLAG)printf("\n fistChildIndexInBuffer=%ld, childCounter=%ld", fistChildIndexInBuffer, childCounter);
 			}
 			printf("\n");
 			tlv->pValue = malloc(realValueLength);				
@@ -300,12 +298,12 @@ size_t TlvParseAllChildrenTLV(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 			valueData = (uint8_t *)(tlv->pValue);
 			for(i=0; i<copyLength; i++)
 			{
-				printf("\n\t primitive TLV Value[%d] = 0x%02X", i, valueData[i]);
+				printf("\n\t primitive TLV Value[%ld] = 0x%02X", i, valueData[i]);
 			}
 
 			if(primitiveFlag == false)//constructed TLV
 			{
-				if(DEBUG_FLAG)printf("\n length=%d, counter=%d, realValueLength=%d, childCounter=%d, fistChildIndexInBuffer=%d", length, counter, realValueLength, childCounter, fistChildIndexInBuffer);
+				if(DEBUG_FLAG)printf("\n length=%ld, counter=%ld, realValueLength=%d, childCounter=%ld, fistChildIndexInBuffer=%ld", length, counter, realValueLength, childCounter, fistChildIndexInBuffer);
 				tlv_temp_pointer = (Tlv_t *)(tlv->pChild);
 				//more child TLV data?
 				while(realValueLength>childCounter)
@@ -328,7 +326,7 @@ size_t TlvParseAllChildrenTLV(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 // TLV objects at the same level in the buffer, only the first TLV object is parsed.
 // This function should be called before any other TLV function calls.
 // return: true-succeed; false-fail
-BOOL TlvParse(const uint8_t* buffer, size_t length, Tlv_t* tlv)
+BOOL TlvParse(const uint8_t* buffer, Tlv_t* tlv)
 {
 	BOOL returnValue = false;
 	size_t counter = 0;
@@ -406,7 +404,7 @@ BOOL TlvParse(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 			if(primitiveFlag == false)//constructed TLV
 			{
 				tlv->pValue = malloc( sizeof(Tlv_t) );
-				TlvParse(&buffer[counter], copyLength, (Tlv_t*)tlv->pValue);//recursive calling
+				TlvParse(&buffer[counter], (Tlv_t*)tlv->pValue);//recursive calling
 			}
 			else
 			{//primitive TLV
@@ -416,7 +414,7 @@ BOOL TlvParse(const uint8_t* buffer, size_t length, Tlv_t* tlv)
 				valueData = (uint8_t *)(tlv->pValue);
 				for(i=0; i<copyLength; i++)
 				{
-					printf("\n\t primitive TLV Value[%d] = 0x%02X", i, valueData[i]);
+					printf("\n\t primitive TLV Value[%ld] = 0x%02X", i, valueData[i]);
 				}
 			}
 		}
@@ -442,7 +440,7 @@ Tlv_t* TlvSearchTagInTree(uint16_t tag, BOOL recursive,Tlv_t* tlv)
 	if(tlv->nTag == tag) 
 	{
 		returnTLV = tlv;
-		printf("\n Found Tag 0x%x ");
+		printf("\n Found Tag 0x%x ", tag);
 	}
 	else if(recursive == true)
 	{
@@ -491,14 +489,13 @@ BOOL TlvSearchTag(const uint8_t* buffer, size_t length, uint16_t tag, BOOL recur
 {
 	BOOL returnValue = false;
 	Tlv_t tlv_obj;
-	Tlv_t* tlv_p=NULL;
 	size_t decodedCounter = 0;
 	
-	if(DEBUG_FLAG)printf("\n length = %d", length);
+	if(DEBUG_FLAG)printf("\n length = %ld", length);
 	while((decodedCounter<length)&&(returnValue == false))
 	{
 		decodedCounter += TlvParseAllChildrenTLV(buffer, length, &tlv_obj);
-		if(DEBUG_FLAG)printf("\n decodedCounter = %d", decodedCounter);
+		if(DEBUG_FLAG)printf("\n decodedCounter = %ld", decodedCounter);
 		tlv = TlvSearchTagInTree(tag, recursive,&tlv_obj);
 		if(tlv!=NULL)
 		{
@@ -519,10 +516,8 @@ BOOL TlvSearchTag(const uint8_t* buffer, size_t length, uint16_t tag, BOOL recur
 //              initialized to represent a TLV container with given tag
 //    tag [IN]: The tag of TLV container
 //    buffer [IN]: The buffer to store entire TLV object
-//   length [IN]: The length of the buffer
-BOOL TlvCreate(Tlv_t* tlv, uint16_t tag, uint8_t* buffer, size_t length)
+BOOL TlvCreate(Tlv_t* tlv, uint16_t tag, uint8_t* buffer)
 {
-	size_t copyLength = 0;
 	tlv->nTag = tag;
 	tlv->nLength = 0;//no Value yet.
 	tlv->pValue = buffer;
@@ -535,8 +530,6 @@ BOOL TlvCreate(Tlv_t* tlv, uint16_t tag, uint8_t* buffer, size_t length)
 BOOL TlvAdd(Tlv_t* tlv, const Tlv_t* childTlv)
 {
 	uint32_t addLengthCounter = 0;
-	BOOL primitiveFlag = true;
-	uint8_t tempByte=0;
 	size_t copyLength=0;
 	size_t realValLength = getRealLength(tlv->nLength, &copyLength);
 
@@ -545,8 +538,7 @@ BOOL TlvAdd(Tlv_t* tlv, const Tlv_t* childTlv)
 	// childTlv Tag field
 	if((childTlv->nTag)&TAG_PC_MASK_FIRST_BYTE)
 	{
-		primitiveFlag = false;//this is a contructed TLV object
-		printf("\n This is a contructed child TLV object.");
+		printf("\n This is a constructed child TLV object.");
 	}
 	if(((childTlv->nTag)&TAG_NUMBER_MASK_FIRST_BYTE)==TAG_NUMBER_MASK_FIRST_BYTE )//bits b5 - b1 of the first byte equal '11111'
 	{
@@ -575,9 +567,9 @@ BOOL TlvAdd(Tlv_t* tlv, const Tlv_t* childTlv)
 
 	//update parent TLV Length
 	realValLength = getRealLength(tlv->nLength, &copyLength);	
-	if(DEBUG_FLAG)printf("\n parent realValLength=0x%x, %d", realValLength, realValLength);	
+	if(DEBUG_FLAG)printf("\n parent realValLength=0x%lx, %ld", realValLength, realValLength);	
 	realValLength += addLengthCounter;
-	if(DEBUG_FLAG)printf("\n parent realValLength=0x%x, %d after addLengthCounter", realValLength, realValLength);
+	if(DEBUG_FLAG)printf("\n parent realValLength=0x%lx, %ld after addLengthCounter", realValLength, realValLength);
 	tlv->nLength = encode_Length(realValLength);
 	if(DEBUG_FLAG)printf("\n After encode length, tlv->nLength = 0x%x", tlv->nLength);
 	return true;
@@ -587,8 +579,6 @@ BOOL TlvAdd(Tlv_t* tlv, const Tlv_t* childTlv)
 BOOL TlvAddData(Tlv_t* tlv, uint16_t tag, const uint8_t* value, size_t valueLen)
 {
 	BOOL returnValue = false;
-	uint8_t * valueData = NULL;
-	size_t i=0;
 	if((valueLen!=0)&&(value!=NULL))
 	{
 		tlv->pChild = NULL;
@@ -725,41 +715,17 @@ uint8_t tlv4Data[] =
 
 void put_int32_to_char_array(int32_t value, uint8_t * valueArray)
 {
-	int n=0, i=0;
-	uint8_t byteCounter=0, returnValue=0;
-	int32_t tempValue=value;
-	memset(valueArray, '\0', sizeof(valueArray));
-	for(n=0; tempValue!=0; byteCounter++)
+	for(int i = 0; i < 4; ++i)
 	{
-		tempValue = tempValue >> 8;
+		valueArray[i] = (uint8_t)((value >> (8 * i)) & 0xFF);
 	}
-	tempValue=value;
-	while (byteCounter-- > 0)
-	{
-		valueArray[i++]=tempValue&0xFF;
-		tempValue = tempValue >> 8;
-	}
-
-	return;
 }
 
 
 void put_int16_to_char_array(uint16_t value, uint8_t * valueArray)
 {
-	int n=0, i=0;
-	uint8_t byteCounter=0, returnValue=0;
-	int32_t tempValue=value;
-	memset(valueArray, '\0', sizeof(valueArray));
-	for(n=0; tempValue!=0; byteCounter++)
-	{
-		tempValue = tempValue >> 8;
-	}
-	tempValue=value;
-	while (byteCounter-- > 0)
-	{
-		valueArray[i++]=tempValue&0xFF;
-		tempValue = tempValue >> 8;
-	}
+	valueArray[0] = (uint8_t)(value & 0xFF);
+	valueArray[1] = (uint8_t)((value >> 8) & 0xFF);
 
 	return;
 }
@@ -770,11 +736,14 @@ void put_int16_to_char_array(uint16_t value, uint8_t * valueArray)
 
 int main(int argc, const char * argv[])
 {
+#ifdef DEMO_EXTRA_CODE
 	uint16_t tagSearch = 0x90;//tag to search	
-	Tlv_t tlv_decoder_obj[10], tlv_decoder_obj_single;	
+	Tlv_t tlv_decoder_obj[10];
 	BOOL recursiveFlag=true;
-	size_t index = 0, i=0, decodedCounter=0;
+	size_t index = 0, decodedCounter=0;
 	int tlv_decoder_obj_counter=0;
+#endif /* DEMO_EXTRA_CODE */
+	Tlv_t tlv_decoder_obj_single;
 
 	uint8_t transmitterBuffer[MAX_VALUE_BUFFER_SIZE_IN_BYTE+SPARE_BUFFER_SIZE];
 	uint8_t * tlv_encoder_buffer = transmitterBuffer+SPARE_BUFFER_SIZE;
@@ -803,7 +772,7 @@ int main(int argc, const char * argv[])
 	/*********************************************************/
 	//decoder DEMO with the given example code
 	/*********************************************************/
-	/*
+#ifdef DEMO_EXTRA_CODE
 	tlv_decoder_obj_counter=0;
 	decodedCounter = 0;
 	
@@ -817,11 +786,11 @@ int main(int argc, const char * argv[])
 	{
 		TlvFree(&tlv_decoder_obj[tlv_decoder_obj_counter]);//free up the tlv space taken by malloc
 	}
-	*/
+#endif /* DEMO_EXTRA_CODE */
 	/*********************************************************/
 	//decoder and search DEMO with the given example code
 	/*********************************************************/
-	/*
+#ifdef DEMO_EXTRA_CODE
 	for(index=0; index<2; index++)//two case: recursive and non-recursive search
 	{
 		tagSearch = 0x57;
@@ -836,7 +805,7 @@ int main(int argc, const char * argv[])
 		}
 		recursiveFlag=false;		
 	}	
-	*/
+#endif /* DEMO_EXTRA_CODE */
 	/*********************************************************/
 	//Encoder and Decoder for the test structure DEMO
 	/*********************************************************/
@@ -854,12 +823,12 @@ int main(int argc, const char * argv[])
 	//mimic transmitter, the transmitted data is in transmitterBuffer
 	//create parent TLV
 	tag_encoder = 0x70;
-	TlvCreate(&tlv_encoder_parent, tag_encoder, tlv_encoder_buffer, MAX_VALUE_BUFFER_SIZE_IN_BYTE);
+	TlvCreate(&tlv_encoder_parent, tag_encoder, tlv_encoder_buffer);
 	if(DEBUG_FLAG){printTLV(&tlv_encoder_parent);}
 
 	//create child TLV
 	//TLV 1
-	strncpy((char *)TxnRef, "demo string", 11);
+	strncpy((char *)TxnRef, "demo string", strlen("demo string")+1);//add 1 for the terminating null
 	tag_encoder = 0xC1;//TAG NUMBER 1
 	TlvAddData(&tlv_encoder_obj1, tag_encoder, TxnRef, sizeof(TxnRef));
 	if(DEBUG_FLAG){printTLV(&tlv_encoder_obj1);}
